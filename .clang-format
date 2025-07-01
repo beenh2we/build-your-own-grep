@@ -1,0 +1,46 @@
+# Based on a standard style
+BasedOnStyle: Google
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+AccessModifierOffset: -4
+IndentCaseLabels: false
+
+# Line length and breaking
+ColumnLimit: 80
+AllowShortBlocksOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Inline
+
+# Macros
+AlignConsecutiveMacros: Consecutive
+
+# Braces
+BreakBeforeBraces: Allman # Allman style puts braces on new lines
+
+# Function parameters
+BinPackParameters: false
+BinPackArguments: false
+AlignAfterOpenBracket: Align
+
+# Spacing
+SpaceBeforeParens: ControlStatements
+SpaceAfterCStyleCast: true
+SpaceBeforeAssignmentOperators: true
+SpacesInParentheses: false
+
+# Include blocks
+SortIncludes: true
+IncludeBlocks: Regroup
+
+# Comments
+ReflowComments: false
+
+# Strings
+BreakStringLiterals: false
+
+# Controls whether to break before binary operators
+BreakBeforeBinaryOperators: All # Options: None, NonAssignment, All
+
+AlignOperands: Align # Options: Align, DontAlign, AlignAfterOperator
