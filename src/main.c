@@ -1,8 +1,52 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define MAX_LINE_LENGTH 1024
+
+typedef struct
+{
+    bool ignore_case;   // -i
+    bool line_number;   // -n
+    bool count_only;    // -c
+    bool invert_match;  // -v
+} grep_options;
+
+void search_file(const char *pattern, const char *filename, bool print_filename)
+{
+    FILE *file;
+    char line[MAX_LINE_LENGTH];
+
+    file = fopen(filename, "r");
+    if (file == NULL)
+    {
+        fprintf(stderr, "Error: Cannot open file '%s'\n", filename);
+        return;
+    }
+
+    while (fgets(line, MAX_LINE_LENGTH, file) != NULL)
+    {
+        if (strstr(line, pattern) != NULL)
+        {
+            if (print_filename)
+            {
+                printf("%s:%s", filename, line);
+            }
+            else
+            {
+                printf("%s", line);
+            }
+
+            if (line[0] != '\0' && line[strlen(line) - 1] != '\n')
+            {
+                printf("\n");
+            }
+        }
+    }
+
+    fclose(file);
+}
 
 /**
  * Basic implementation of grep
@@ -10,39 +54,20 @@
  */
 int main(int argc, char const *argv[])
 {
-    FILE *file;
-    char line[MAX_LINE_LENGTH];
-
-    // Validate command-line arguments
-    if (argc != 3)
+    // Check for minimum required arguments
+    if (argc < 3)
     {
         fprintf(stderr, "Usage: %s <pattern> <file>\n", argv[0]);
         return EXIT_FAILURE;
     }
 
     const char *pattern = argv[1];
-    const char *filename = argv[2];
+    bool print_filename = (argc > 3);
 
-    // Open the file
-    file = fopen(filename, "r");
-    if (file == NULL)
+    for (int i = 2; i < argc; i++)
     {
-        fprintf(stderr, "Error: Cannot open file '%s'\n", filename);
-        return EXIT_FAILURE;
+        search_file(pattern, argv[i], print_filename);
     }
-
-    // Read the file line by line
-    while (fgets(line, MAX_LINE_LENGTH, file) != NULL)
-    {
-        // Check if the line contains the pattern
-        if (strstr(line, pattern) != NULL)
-        {
-            printf("%s", line);
-        }
-    }
-
-    // Close the file
-    fclose(file);
 
     return EXIT_SUCCESS;
 }
