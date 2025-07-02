@@ -78,10 +78,70 @@ bool match_pattern(const char *line, const char *pattern)
 
 /**
  * Check if a line matches a pattern with anchors (^ and $)
+ * ^ matches the start of a line (like "^abc" matches "abc..." but not "...abc")
+ * $ matches the end of a line (like "abc$" matches "...abc" but not "abc...")
  */
 bool match_with_anchors(const char *line, const char *pattern)
 {
-    return false;
+    size_t pattern_len = strlen(pattern);
+    size_t line_len = strlen(line);
+
+    // Handle ^ anchor (start of line)
+    if (pattern[0] == '^')
+    {
+        // Check if the line starts with the pattern (minus the ^)
+        const char *subpattern = pattern + 1;
+        size_t subpattern_len = pattern_len - 1;
+
+        // Check if the line starts with the subpattern
+        if (line_len < subpattern_len)
+        {
+            return false;
+        }
+
+        for (size_t i = 0; i < subpattern_len; i++)
+        {
+            if (subpattern[i] != line[i])
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    // Handle $ anchor (end of line)
+    if (pattern_len > 0 && pattern[pattern_len - 1] == '$')
+    {
+        // Check if the line ends with the pattern (minus the $)
+        size_t subpattern_len = pattern_len - 1;
+
+        // If the line has a trailing newline, ignore it for comparison
+        size_t effective_line_len = line_len;
+        if (line_len > 0 && line[line_len - 1] == '\n')
+        {
+            effective_line_len--;
+        }
+
+        if (effective_line_len < subpattern_len)
+        {
+            return false;
+        }
+
+        // Check if the line ends with the subpattern
+        const char *line_end = line + effective_line_len - subpattern_len;
+        for (size_t i = 0; i < subpattern_len; i++)
+        {
+            if (pattern[i] != line_end[i])
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // If no anchors, just check if the pattern appears anywhere in the line
+    return strstr(line, pattern) != NULL;
 }
 
 /**
