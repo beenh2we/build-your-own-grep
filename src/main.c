@@ -9,11 +9,80 @@
 
 typedef struct
 {
-    bool ignore_case;   // -i
-    bool line_number;   // -n
-    bool count_only;    // -c
-    bool invert_match;  // -v
+    bool ignore_case;    // -i
+    bool line_number;    // -n
+    bool count_only;     // -c
+    bool invert_match;   // -v
+    bool use_wildcards;  // -w
+    bool use_anchors;    // -a
 } grep_options;
+
+bool match_from_current_position(const char *line, const char *pattern)
+{
+    // End of pattern reached, return true
+    if (*pattern == '\0') return true;
+
+    // Handle * wildcard (matches zero or more characters)
+    if (*pattern == '*')
+    {
+        // Skip the wildcard
+        pattern++;
+
+        // Try to match the rest of the pattern with different amounts of text
+        while (*line)
+        {
+            if (match_from_current_position(line, pattern))
+            {
+                return true;
+            }
+            line++;
+        }
+
+        // Check if the remaining pattern matches empty text
+        return match_from_current_position(line, pattern);
+    }
+
+    // Handle ? wildcard (matches exactly one character)
+    if (*pattern == '?' && *line != '\0')
+    {
+        return match_from_current_position(line + 1, pattern + 1);
+    }
+
+    // If the current characters match, check the rest of the string
+    if (*pattern == *line)
+    {
+        return match_from_current_position(line + 1, pattern + 1);
+    }
+
+    return false;
+}
+
+/**
+ * Simple pattern matching function that supports * and ? wildcards
+ * * matches zero or more characters
+ * ? matches exactly one character
+ */
+bool match_pattern(const char *line, const char *pattern)
+{
+    if (*pattern == '\0') return true;
+
+    while (*line)
+    {
+        if (match_from_current_position(line, pattern)) return true;
+
+        line++;
+    }
+
+    return false;
+}
+
+/**
+ * Check if a line matches a pattern with anchors (^ and $)
+ */
+bool match_with_anchors(const char *line, const char *pattern)
+{
+    return false;
+}
 
 /**
  * Check if line matches the pattern based on the provided options
@@ -21,31 +90,43 @@ typedef struct
 bool line_matches(const char *line, const char *pattern, grep_options opts)
 {
     bool match = false;
+
+    // Case-insentive search
+    char line_copy[MAX_LINE_LENGTH];
+    char pattern_copy[MAX_LINE_LENGTH];
+
     if (opts.ignore_case)
     {
-        // Case-insentive search
-        char line_lower[MAX_LINE_LENGTH];
-        char pattern_lower[MAX_LINE_LENGTH];
-
         size_t i;
         for (i = 0; line[i] && i < MAX_LINE_LENGTH - 1; i++)
         {
-            line_lower[i] = tolower(line[i]);
+            line_copy[i] = tolower(line[i]);
         }
-        line_lower[i] = '\0';
+        line_copy[i] = '\0';
 
         for (i = 0; pattern[i] && i < MAX_LINE_LENGTH - 1; i++)
         {
-            pattern_lower[i] = tolower(pattern[i]);
+            pattern_copy[i] = tolower(pattern[i]);
         }
-        pattern_lower[i] = '\0';
-
-        match = strstr(line_lower, pattern_lower) != NULL;
+        pattern_copy[i] = '\0';
     }
     else
     {
-        // Case-sensitive search
-        match = strstr(line, pattern) != NULL;
+        strcpy(line_copy, line);
+        strcpy(pattern_copy, pattern);
+    }
+
+    if (opts.use_anchors)
+    {
+        match = match_with_anchors(line_copy, pattern_copy);
+    }
+    else if (opts.use_wildcards)
+    {
+        match = match_pattern(line_copy, pattern_copy);
+    }
+    else
+    {
+        match = strstr(line_copy, pattern_copy) != NULL;
     }
 
     // Apply invert_match option if needed
@@ -128,14 +209,16 @@ void search_file(const char *pattern, const char *filename, grep_options opts, b
  */
 void print_usage(const char *program_name)
 {
-    fprintf(stderr, "Usaeg: %s [OPTIONS] PATTERN [FILE...]\n", program_name);
+    fprintf(stderr, "Usage: %s [OPTIONS] PATTERN [FILE...]\n", program_name);
     fprintf(stderr, "Search for PATTERN in each FILE.\n\n");
     fprintf(stderr, "Options:\n");
-    fprintf(stderr, "  -i         Ignore case distinctions\n");
-    fprintf(stderr, "  -n         Print line number with output lines\n");
-    fprintf(stderr, "  -c         Print only a count of matching lines per file\n");
-    fprintf(stderr, "  -v         Invert the sense of matching, to select non-matching lines\n");
-    fprintf(stderr, "  -h         Display this help and exit\n");
+    fprintf(stderr, "  -i       Ignore case distinctions\n");
+    fprintf(stderr, "  -n       Print line number with output lines\n");
+    fprintf(stderr, "  -c       Print only a count of matching lines per file\n");
+    fprintf(stderr, "  -v       Invert the sense of matching, to select non-matching lines\n");
+    fprintf(stderr, "  -w       Use wildcard pattern matching (* and ?)\n");
+    fprintf(stderr, "  -a       Enable anchor matching (^ for start of line, $ for end of line)\n");
+    fprintf(stderr, "  -h       Display this help and exit\n");
 }
 
 /**
@@ -145,9 +228,9 @@ void print_usage(const char *program_name)
 int main(int argc, char *argv[])
 {
     int opt;
-    grep_options options = {false, false, false, false};
+    grep_options options = {false, false, false, false, false, false};
 
-    while ((opt = getopt(argc, argv, "incvh")) != -1)
+    while ((opt = getopt(argc, argv, "incvwah")) != -1)
     {
         switch (opt)
         {
@@ -162,6 +245,12 @@ int main(int argc, char *argv[])
             break;
         case 'v':
             options.invert_match = true;
+            break;
+        case 'w':
+            options.use_wildcards = true;
+            break;
+        case 'a':
+            options.use_anchors = true;
             break;
         case 'h':
             print_usage(argv[0]);
