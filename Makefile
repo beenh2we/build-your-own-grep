@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c17
+CFLAGS = -Wall -Wextra -std=c17 -g
 
 BUILD_DIR = build
 
